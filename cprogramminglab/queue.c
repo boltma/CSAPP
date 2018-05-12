@@ -23,6 +23,14 @@
 queue_t *q_new()
 {
     /* Remember to handle the case if malloc returned NULL */
+    queue_t *q = malloc (sizeof (queue_t));
+	if (q)
+	{
+		q->head = NULL;
+		q->tail = NULL;
+		q->size = 0;
+		return q;
+	}
     return NULL;
 }
 
@@ -30,6 +38,17 @@ queue_t *q_new()
 void q_free(queue_t *q)
 {
     /* Remember to free the queue structue and list elements */
+    if (q)
+	{
+		list_ele_t *r = q->head;
+		while (r)
+		{
+			list_ele_t *tmp = r;
+			r = r->next;
+			free (tmp);
+		}
+		free (q);
+	}
 }
 
 /*
@@ -41,6 +60,18 @@ bool q_insert_head(queue_t *q, int v)
 {
     /* What should you do if the q is NULL? */
     /* What if malloc returned NULL? */
+	if (!q)
+		return false;
+	list_ele_t *new = malloc (sizeof (list_ele_t));
+	if (!new)
+		return false;
+	else
+		new->value = v;
+	new->next = q->head;
+	q->head = new;
+	if (!q->size)
+		q->tail = new;
+	(q->size)++;
     return true;
 }
 
@@ -53,6 +84,21 @@ bool q_insert_head(queue_t *q, int v)
 bool q_insert_tail(queue_t *q, int v)
 {
     /* Remember: It should operate in O(1) time */
+	if(!q)
+		return false;
+    list_ele_t *new = malloc (sizeof (list_ele_t));
+	if (new)
+	{
+		new->value = v;
+		new->next = NULL;
+		if (!q->size)
+			q->head = new;
+		else
+			q->tail->next = new;
+		q->tail = new;
+		(q->size)++;
+		return true;
+	}
     return false;
 }
 
@@ -65,6 +111,16 @@ bool q_insert_tail(queue_t *q, int v)
 */
 bool q_remove_head(queue_t *q, int *vp)
 {
+    if (!q || !q->size)
+		return false;
+	list_ele_t *tmp = q->head;
+	q->head = tmp->next;
+	if (vp)
+		*vp = tmp->value;
+	(q->size)--;
+	if (!q->size)
+		q->tail = NULL;
+	free (tmp);
     return true;
 }
 
@@ -75,6 +131,8 @@ bool q_remove_head(queue_t *q, int *vp)
 int q_size(queue_t *q)
 {
     /* Remember: It should operate in O(1) time */
+    if (q)
+		return q->size;
     return 0;
 }
 
@@ -87,6 +145,21 @@ int q_size(queue_t *q)
  */
 void q_reverse(queue_t *q)
 {
-
+	if (q && q->size && q->size != 1)
+	{
+		list_ele_t *r = NULL, *s = q->head, *t = s->next;
+		while (t)
+		{
+			s->next = r;
+			r = s;
+			s = t;
+			t = t->next;
+		}
+		s->next = r;
+		list_ele_t *tmp = q->tail;
+		q->tail = q->head;
+		q->head = tmp;
+	}
+	return;
 }
 
