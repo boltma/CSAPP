@@ -139,7 +139,7 @@ NOTES:
  *   Rating: 1
  */
 int bitAnd(int x, int y) {
-  return 2;
+  return ~ (~x | ~y);
 }
 /* 
  * getByte - Extract byte n from word x
@@ -150,15 +150,7 @@ int bitAnd(int x, int y) {
  *   Rating: 2
  */
 int getByte(int x, int n) {
-
-
-
-
-
-
-
-  return 2;
-
+  return (x >> (n << 3)) & 0xFF;
 }
 /* 
  * logicalShift - shift x to the right by n, using a logical shift
@@ -169,7 +161,7 @@ int getByte(int x, int n) {
  *   Rating: 3 
  */
 int logicalShift(int x, int n) {
-  return 2;
+  return (x >> n) & ~ ( ( (1 << 31) >> n) << 1);
 }
 /*
  * bitCount - returns count of number of 1's in word
@@ -179,7 +171,18 @@ int logicalShift(int x, int n) {
  *   Rating: 4
  */
 int bitCount(int x) {
-  return 2;
+  int mask_1 = 0x55 + (0x55 << 8);
+  int mask_2 = 0x33 + (0x33 << 8);
+  int mask_3 = 0x0F + (0x0F << 8);
+  mask_1 = mask_1 + (mask_1 << 16);
+  mask_2 = mask_2 + (mask_2 << 16);
+  mask_3 = mask_3 + (mask_3 << 16);
+  x = (x & mask_1) + ( (x >> 1) & mask_1);
+  x = (x & mask_2) + ( (x >> 2) & mask_2);
+  x = (x + (x >> 4)) & mask_3;
+  x += x >> 8;
+  x += x >> 16;
+  return x & 0x3F;
 }
 /* 
  * bang - Compute !x without using !
@@ -189,7 +192,7 @@ int bitCount(int x) {
  *   Rating: 4 
  */
 int bang(int x) {
-  return 2;
+  return ( (~ (x | (~x + 1))) >> 31) & 1; //only 0 satisfies that x and -x both have 0 in the highest bit
 }
 /* 
  * tmin - return minimum two's complement integer 
@@ -198,7 +201,7 @@ int bang(int x) {
  *   Rating: 1
  */
 int tmin(void) {
-  return 2;
+  return 1 << 31;
 }
 /* 
  * fitsBits - return 1 if x can be represented as an 
@@ -210,7 +213,7 @@ int tmin(void) {
  *   Rating: 2
  */
 int fitsBits(int x, int n) {
-  return 2;
+  return ! ( ( (x >> (n + (~0))) + 1) >> 1);
 }
 /* 
  * divpwr2 - Compute x/(2^n), for 0 <= n <= 30
@@ -221,7 +224,10 @@ int fitsBits(int x, int n) {
  *   Rating: 2
  */
 int divpwr2(int x, int n) {
-    return 2;
+  int a = x >> 31;
+  int b = ~0 + (1 << n);
+  b &= a;
+  return (x + b) >> n;
 }
 /* 
  * negate - return -x 
@@ -231,7 +237,7 @@ int divpwr2(int x, int n) {
  *   Rating: 2
  */
 int negate(int x) {
-  return 2;
+  return ~x + 1;
 }
 /* 
  * isPositive - return 1 if x > 0, return 0 otherwise 
@@ -241,7 +247,8 @@ int negate(int x) {
  *   Rating: 3
  */
 int isPositive(int x) {
-  return 2;
+  int m = x & (1 << 31);
+  return ! (m | !x);
 }
 /* 
  * isLessOrEqual - if x <= y  then return 1, else return 0 
@@ -251,7 +258,11 @@ int isPositive(int x) {
  *   Rating: 3
  */
 int isLessOrEqual(int x, int y) {
-  return 2;
+  int _y = ~y;
+  int flag1 = (x & _y) >> 31;
+  int flag2 = (x ^ _y) >> 31;
+  int flag3 = flag2 & ( (x + _y) >> 31) & 1;
+  return (flag1 | flag3) & 1;
 }
 /*
  * ilog2 - return floor(log base 2 of x), where x > 0
@@ -261,7 +272,12 @@ int isLessOrEqual(int x, int y) {
  *   Rating: 4
  */
 int ilog2(int x) {
-  return 2;
+  int result = !! (x >> 16) << 4;
+  result += !! (x >> (result + 8)) << 3;
+  result += !! (x >> (result + 4)) << 2;
+  result += !! (x >> (result + 2)) << 1;
+  result += !! (x >> (result + 1));
+  return result;
 }
 /* 
  * float_neg - Return bit-level equivalent of expression -f for
@@ -275,7 +291,10 @@ int ilog2(int x) {
  *   Rating: 2
  */
 unsigned float_neg(unsigned uf) {
- return 2;
+  unsigned a = uf & (0x7FFFFFFF);
+  if (a > 0x7F800000)
+    return uf;
+  return uf ^ (1 << 31);
 }
 /* 
  * float_i2f - Return bit-level equivalent of expression (float) x
@@ -287,7 +306,22 @@ unsigned float_neg(unsigned uf) {
  *   Rating: 4
  */
 unsigned float_i2f(int x) {
-  return 2;
+  int sign = x & 0x80000000;
+  int i = 0, j = 0;
+  if (!x)
+    return x;
+  if (x < 0)
+    x = -x;
+  while (x >= 0)
+  {
+    x <<= 1;
+    ++i;
+  }
+  i = (158 - i) << 23;
+  if ( (x & 0xff) > 0x80 || (x & 0x1ff) == 0x180)
+    j = 1;
+  x = (x >> 8) & 0x007FFFFF;
+  return sign + i + j + x;
 }
 /* 
  * float_twice - Return bit-level equivalent of expression 2*f for
@@ -301,5 +335,13 @@ unsigned float_i2f(int x) {
  *   Rating: 4
  */
 unsigned float_twice(unsigned uf) {
-  return 2;
+  if ( (uf & 0x7f800000) == 0)
+  {
+    uf = (uf << 1) | (uf & 0x80000000);
+  }
+  else if ( (uf & 0x7f800000) != 0x7f800000)
+  {
+    uf = uf + 0x00800000;
+  }
+  return uf;
 }
