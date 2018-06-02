@@ -1,0 +1,17 @@
+set_row:
+	testq	%rcx, %rcx		# Test n
+	jle	.L4			# If 0, goto done
+	movq	%rcx, %rax		# rax = n
+	imulq	%rdx, %rax		# rax *= i
+	leaq	(%rdi,%rax,8), %rdx	# rowp = A + n*i*8
+	movl	$0, %r8d		# j = 0
+.L3:					# loop:
+	movq	(%rsi,%r8,8), %rax	# t = b[j]
+	movq	%rax, (%rdx)		# *rowp = t
+	addq	$1, %r8			# j++
+	addq	$8, %rdx		# rowp++
+	cmpq	%r8, %rcx		# Compare n:j
+	jg	.L3			# If >, goto loop
+.L4:					# done:
+	rep
+	ret
